@@ -1,0 +1,8 @@
+node_modules
+dist
+certs/*
+Logs/*
+.vscode
+.gitgnore
+uploads/images/*
+uploads/videos/*

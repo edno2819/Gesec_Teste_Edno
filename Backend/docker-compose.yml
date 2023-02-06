@@ -1,0 +1,63 @@
+version: "3.2"
+
+services:
+  minio:
+    image: bitnami/minio
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin123
+      MINIO_SERVER_HOST: localhost
+      MINIO_SCHEME: http
+      MINIO_API_CORS_ALLOW_ORIGIN: '*'
+    networks:
+      - mynet
+
+  mc:
+    image: minio/mc
+    container_name: mc
+    network_mode: host
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c " /usr/bin/mc config host add --api s3v2 minio http://${HOST}:9000/  admin admin123; /usr/bin/mc rm -r --force minio/first-bucket; /usr/bin/mc mb -p minio/first-bucket; /usr/bin/mc policy set public minio/first-bucket; /usr/bin/mc admin trace minio -a --debug; "
+
+  mongogesec:
+    image: mongo:latest
+    container_name: 'mongogesec'
+    ports:
+      - ${MONGO_INTERNAL_PORT}:${MONGO_EXTERNAL_PORT}
+    networks:
+      - mynet
+
+  backend:
+    restart: always
+    command: ${START_BACK_COMMAND}
+    build:
+      context: ./
+    volumes:
+      - .:/src
+    depends_on:
+      - mongogesec
+      - minio
+    environment:
+      HOST: ${HOST}
+      PORT: ${NODE_EXTERNAL_PORT}
+      MONGO_NAME: 'mongogesec'
+      MONGO_URL: mongodb://mongogesec:${MONGO_EXTERNAL_PORT}
+      ACCESS_TOKEN: ${ACCESS_TOKEN}
+      BUCKET_HOST: http://${HOST}:9000/
+      BUCKET_ENDPOINT: http://minio:9000/
+      BUCKET_ACCESS_KEY: admin
+      BUCKET_SECRET_KEY: admin123
+      BUCKET_NAME: first-bucket
+    ports:
+      - ${NODE_INTERNAL_PORT}:${NODE_EXTERNAL_PORT}
+    networks:
+      - mynet
+
+networks:
+  mynet:
+    driver: bridge

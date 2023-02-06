@@ -1,0 +1,10 @@
+node_modules
+package-lock.json
+certs/*
+logs/*
+.vscode
+.env.dev
+.env
+uploads/images/*
+uploads/videos/*
+#.env
